@@ -49,3 +49,16 @@ book's text.
 - `AudioTap.kt` – optional voice-level reading via `Visualizer`
 - `Palette.kt` – picks three colours from the cover
 - `MainActivity.kt` – screen, controls, setup card
+
+## Story mode (draws what the narrator says)
+Tap **Story mode** under the play controls. While the book plays, StoryGlow listens
+through the microphone, turns the narration into text on the phone, and draws a
+simple animated scene from the words it recognises:
+- **Places**: field, forest, sea/beach, mountains, city, desert, river, indoors
+- **Things**: tree (people walk under it), house, fire, boat, castle
+- **Time & weather**: day, sunset, night (moon & stars), rain, storm, snow, fog
+- **Characters**: man, woman, child, old man, king, queen, soldier, dog, cat, horse, birds, wolf
+- **Actions**: walk, run, sit, sleep, ride, fly, swim, fight
+
+Play Audible through the phone speaker; with headphones the mic can't hear the book.
+The last sentence heard and the words it reacted to appear on screen.

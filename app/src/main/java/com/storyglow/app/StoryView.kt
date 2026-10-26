@@ -32,8 +32,9 @@ import kotlin.random.Random
 class StoryView(context: Context) : View(context) {
 
     companion object {
-        const val SCENES = 3
-        val SCENE_NAMES = arrayOf("Aurora", "Embers", "Cover")
+        const val SCENES = 4
+        const val STORY = 3
+        val SCENE_NAMES = arrayOf("Aurora", "Embers", "Cover", "Story")
     }
 
     var playing = false
@@ -42,6 +43,9 @@ class StoryView(context: Context) : View(context) {
 
     var scene = 0
         private set
+
+    /** Scene 3: pictures of what the narrator is describing. */
+    val story = StoryScene()
 
     private val cur = FloatArray(9)
     private val tgt = FloatArray(9)
@@ -144,6 +148,12 @@ class StoryView(context: Context) : View(context) {
         val w = width.toFloat()
         val h = height.toFloat()
         if (w <= 0f || h <= 0f) { postInvalidateOnAnimation(); return }
+
+        if (scene == STORY) {
+            story.draw(c, w, h, dt, playing)
+            postInvalidateOnAnimation()
+            return
+        }
 
         // background
         paint.style = Paint.Style.FILL
