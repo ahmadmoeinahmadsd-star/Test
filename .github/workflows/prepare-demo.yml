@@ -24,13 +24,16 @@ jobs:
           ls -la app/src/main/assets/demo
       - name: Transcribe with timestamps
         run: |
-          pip install -q faster-whisper==1.1.1
-          python tools/transcribe.py app/src/main/assets/demo/hansel.mp3 app/src/main/assets/demo/transcript.json
+          set -o pipefail
+          mkdir -p tools/logs
+          ( pip install -q faster-whisper && python -c "import faster_whisper, ctranslate2; print('fw', faster_whisper.__version__, 'ct2', ctranslate2.__version__)" \
+            && python tools/transcribe.py app/src/main/assets/demo/hansel.mp3 app/src/main/assets/demo/transcript.json ) 2>&1 | tee tools/logs/transcribe.log
       - name: Commit results
+        if: always()
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
-          git add app/src/main/assets/demo
+          git add app/src/main/assets/demo tools/logs
           git commit -m "Add demo audio and transcript" || exit 0
           git pull --rebase origin main
           git push

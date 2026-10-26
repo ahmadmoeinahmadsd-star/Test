@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>StoryGlow Theater</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: Georgia, 'Times New Roman', serif; color: #fff; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  canvas { position: fixed; inset: 0; display: block; }
+  #tap { position: fixed; inset: 0; }
+  #caption { position: fixed; left: 0; right: 0; bottom: 120px; padding: 0 22px; text-align: center; font-size: clamp(17px, 2.4vw, 26px); line-height: 1.45; color: rgba(255,255,255,.55); text-shadow: 0 2px 10px #000, 0 0 3px #000; transition: opacity .5s; pointer-events: none; }
+  #caption span { transition: color .2s; }
+  #caption span.said { color: rgba(255,248,232,.92); }
+  #caption span.now { color: #ffe3a3; }
+  #ui { position: fixed; left: 0; right: 0; bottom: 0; padding: 18px 20px calc(18px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(0,0,0,.7)); transition: opacity .6s, transform .6s; }
+  #ui.hide { opacity: 0; transform: translateY(20px); pointer-events: none; }
+  #top { position: fixed; top: 0; left: 0; right: 0; padding: calc(14px + env(safe-area-inset-top)) 20px 30px; background: linear-gradient(rgba(0,0,0,.55), transparent); transition: opacity .6s; pointer-events: none; }
+  #ui.hide ~ #top { opacity: 0; }
+  #book { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+  #chapter { font-size: 19px; font-style: italic; margin-top: 4px; }
+  #bar { position: relative; height: 22px; cursor: pointer; touch-action: none; }
+  #track { position: absolute; left: 0; right: 0; top: 9px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.22); }
+  #fill { position: absolute; left: 0; top: 9px; height: 4px; border-radius: 2px; background: #ffd99a; }
+  #ticks i { position: absolute; top: 6px; width: 2px; height: 10px; background: rgba(255,255,255,.5); }
+  #row { display: flex; align-items: center; justify-content: center; gap: 22px; margin-top: 6px; }
+  #row button { background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 40px; font-size: 15px; padding: 10px 16px; font-family: inherit; }
+  #play { font-size: 22px !important; padding: 12px 26px !important; background: rgba(255,255,255,.22) !important; }
+  #cc.off { opacity: .45; }
+  #time { text-align: center; font-size: 12px; opacity: .7; margin-top: 4px; font-family: system-ui, sans-serif; }
+  #start { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 45%, rgba(40,30,70,.6), rgba(0,0,0,.92)); transition: opacity 1s; z-index: 5; text-align: center; padding: 30px; }
+  #start.gone { opacity: 0; pointer-events: none; }
+  #start h1 { font-weight: normal; font-style: italic; font-size: clamp(34px, 7vw, 64px); margin: 0 0 6px; color: #ffe8c4; }
+  #start p { margin: 4px 0; opacity: .75; }
+  #start .go { margin-top: 28px; padding: 14px 34px; border-radius: 40px; background: #ffd99a; color: #2a1a10; font-size: 18px; }
+  #start small { position: absolute; bottom: 24px; left: 20px; right: 20px; opacity: .5; font-size: 12px; font-family: system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="tap"></div>
+<div id="caption"></div>
+<div id="ui">
+  <div id="bar"><div id="track"></div><div id="ticks"></div><div id="fill"></div></div>
+  <div id="row">
+    <button id="back">↺ 15</button>
+    <button id="play">▶</button>
+    <button id="fwd">15 ↻</button>
+    <button id="cc">CC</button>
+  </div>
+  <div id="time">0:00</div>
+</div>
+<div id="top"><div id="book">Brothers Grimm · read by Bill Stackpole</div><div id="chapter">Hansel and Gretel</div></div>
+<div id="start">
+  <h1>Hansel and Gretel</h1>
+  <p>An illustrated audiobook</p>
+  <p style="font-size:14px">Brothers Grimm · LibriVox recording</p>
+  <div class="go">▶ Begin the story</div>
+  <small>Public-domain recording from LibriVox.org · Visuals generated live by StoryGlow</small>
+</div>
+<audio id="audio" src="../demo/hansel.mp3" preload="auto"></audio>
+<script src="core.js"></script>
+<script src="world.js"></script>
+<script src="figures.js"></script>
+<script src="../demo/transcript.js"></script>
+<script src="story.js"></script>
+<script src="theater.js"></script>
+</body>
+</html>
