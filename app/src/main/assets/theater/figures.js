@@ -10,7 +10,8 @@ const CAST = {
   witch:      { h: 140, kind: "witch" },
   whitebird:  { h: 22, kind: "bird", color: [250, 250, 245], glow: true },
   birds:      { h: 14, kind: "flock" },
-  duck:       { h: 60, kind: "duck" },
+  duck:       { h: 120, kind: "duck" },
+  mouse:      { h: 26, kind: "mouse" },
 };
 
 // ---------------------------------------------------------------- poses
@@ -43,7 +44,7 @@ const ACTS = {
   reach: (p) => ({ hip: .02 + Math.sin(p * 2) * .006, lean: -.06, head: -.45, lA: 2.7 + Math.sin(p * 2) * .1, lE: .1, rA: 2.4 + Math.cos(p * 2) * .1, rE: .2, lT: .05, rT: -.05 }),
   eat: (p) => ({ hip: Math.sin(p * 3) * .004, head: Math.sin(p * 3) * .05, lA: 1.2 + Math.sin(p * 3) * .25, lE: 2.0, rA: .4, rE: .9 }),
   push: (p) => ({ hip: -.04, lean: .5, lT: .55, lK: .5, rT: -.5, rK: .2, lA: 1.55, lE: .05, rA: 1.45, rE: .1, head: -.15 }),
-  fall: (p) => ({ hip: 0, lean: 1.35, lT: -.3, rT: .1, lA: 2.6, lE: .3, rA: 2.9, rE: .2, head: -.3 }),
+  fall: (p) => ({ hip: -.05, lean: .95, lT: .4, lK: .3, rT: -.6, rK: .5, lA: -2.2 + Math.sin(p * 4) * .4, lE: -.6, rA: -2.6 + Math.cos(p * 4) * .4, rE: -.4, head: -.5 }),
   hug: (p) => ({ hip: Math.sin(p) * .006, lean: .12, lA: 1.25, lE: 1.3, rA: 1.15, rE: 1.4, head: .15 }),
   cower: (p) => ({ hip: -.1, lean: .4, lK: .6, rK: .6, lT: .25, rT: -.05, lA: 2.3, lE: 2.2, rA: 2.0, rE: 2.3, head: .5 + Math.sin(p * 6) * .02 }),
   point: (p) => ({ lA: 1.6, lE: .02, rA: .1, rE: .2, head: -.05 }),
@@ -58,8 +59,8 @@ const ACTS = {
   dance: (p) => ({ ...walkPose(p * 1.4, .4, .8), hip: Math.abs(Math.sin(p * 2.8)) * .04, lA: 2.2 + Math.sin(p * 2.8) * .4, lE: .5, rA: 1.0 + Math.cos(p * 2.8) * .4, rE: .9, lean: -.05 }),
 };
 
-const MOVING = new Set(["walk", "run", "sneak", "creep", "carry", "lookback", "dance"]);
-const STRIDE = { walk: .55, run: .9, sneak: .3, creep: .28, carry: .55, lookback: .4, dance: .45 };
+const MOVING = new Set(["walk", "run", "sneak", "creep", "carry", "lookback", "dance", "scurry"]);
+const STRIDE = { walk: .55, run: .9, sneak: .3, creep: .28, carry: .55, lookback: .4, dance: .45, scurry: 1.2 };
 
 function poseFor(act, p) { return { ...BASE, ...(ACTS[act] || ACTS.stand)(p) }; }
 function blendPose(a, b, k) {
@@ -105,12 +106,12 @@ function drawHumanoid(ctx, kind, H, P, col, t, extra = {}) {
   ctx.save(); ctx.translate(0, hipY); ctx.rotate(lean);
   if (kind === "girl") {
     ctx.beginPath(); ctx.moveTo(-H * .07, -torsoL); ctx.lineTo(H * .07, -torsoL);
-    ctx.lineTo(H * .17, H * .2); ctx.quadTo(0, H * .23, -H * .17, H * .2); ctx.closePath(); ctx.fill();
+    ctx.lineTo(H * .17, H * .2); ctx.quadraticCurveTo(0, H * .23, -H * .17, H * .2); ctx.closePath(); ctx.fill();
   } else if (kind === "woman") {
     ctx.beginPath(); ctx.moveTo(-H * .06, -torsoL); ctx.lineTo(H * .06, -torsoL);
-    ctx.lineTo(H * .2, H * .46); ctx.quadTo(0, H * .5, -H * .2, H * .46); ctx.closePath(); ctx.fill();
+    ctx.lineTo(H * .2, H * .46); ctx.quadraticCurveTo(0, H * .5, -H * .2, H * .46); ctx.closePath(); ctx.fill();
   } else if (kind === "witch") {
-    ctx.beginPath(); ctx.moveTo(-H * .09, -torsoL * 1.05); ctx.quadTo(H * .1, -torsoL * 1.15, H * .1, -torsoL * .6);
+    ctx.beginPath(); ctx.moveTo(-H * .09, -torsoL * 1.05); ctx.quadraticCurveTo(H * .1, -torsoL * 1.15, H * .1, -torsoL * .6);
     ctx.lineTo(H * .22, H * .45);
     for (let i = 0; i < 6; i++) ctx.lineTo(H * (.22 - (i + .5) * .075), H * (.45 + (i % 2 ? .02 : -.03))); // ragged hem
     ctx.lineTo(-H * .24, H * .45); ctx.closePath(); ctx.fill();
@@ -135,12 +136,12 @@ function drawHumanoid(ctx, kind, H, P, col, t, extra = {}) {
   ctx.beginPath(); ctx.arc(0, 0, headR, 0, TAU); ctx.fill();
   // profile nose
   ctx.beginPath();
-  if (kind === "witch") { ctx.moveTo(headR * .8, -headR * .3); ctx.quadTo(headR * 1.9, headR * .1, headR * 1.5, headR * .7); ctx.lineTo(headR * .8, headR * .3); }
+  if (kind === "witch") { ctx.moveTo(headR * .8, -headR * .3); ctx.quadraticCurveTo(headR * 1.9, headR * .1, headR * 1.5, headR * .7); ctx.lineTo(headR * .8, headR * .3); }
   else { ctx.moveTo(headR * .9, -headR * .15); ctx.lineTo(headR * 1.22, headR * .2); ctx.lineTo(headR * .9, headR * .3); }
   ctx.fill();
   if (kind === "witch") { // chin, hood, red eyes
     ctx.beginPath(); ctx.moveTo(headR * .5, headR * .7); ctx.lineTo(headR * 1.1, headR * 1.1); ctx.lineTo(headR * .2, headR * .95); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-headR * 1.5, headR * 1.6); ctx.quadTo(-headR * 1.6, -headR * 1.6, headR * .4, -headR * 1.35); ctx.quadTo(headR * .9, -headR * 1.1, headR * .7, -headR * .5); ctx.lineTo(-headR * .2, headR * 1.4); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-headR * 1.5, headR * 1.6); ctx.quadraticCurveTo(-headR * 1.6, -headR * 1.6, headR * .4, -headR * 1.35); ctx.quadraticCurveTo(headR * .9, -headR * 1.1, headR * .7, -headR * .5); ctx.lineTo(-headR * .2, headR * 1.4); ctx.closePath(); ctx.fill();
     ctx.fillStyle = `rgba(255,${50 + 30 * Math.sin(t * 3) | 0},40,.95)`; ctx.beginPath(); ctx.arc(headR * .45, -headR * .15, headR * .16, 0, TAU); ctx.fill();
     glow(ctx, headR * .45, -headR * .15, headR * .9, [255, 60, 40], .35);
   }
@@ -158,8 +159,8 @@ function drawHumanoid(ctx, kind, H, P, col, t, extra = {}) {
     }
     ctx.beginPath(); ctx.arc(0, -headR * .15, headR * 1.08, Math.PI * .9, Math.PI * 2.05); ctx.fill();
   } else if (kind === "man") { // woodcutter hat and beard
-    ctx.beginPath(); ctx.moveTo(-headR * 1.2, -headR * .55); ctx.lineTo(headR * 1.3, -headR * .55); ctx.lineTo(headR * .7, -headR * .75); ctx.quadTo(0, -headR * 1.9, -headR * .7, -headR * .75); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(headR * .2, headR * .3); ctx.quadTo(headR * 1.0, headR * .5, headR * .6, headR * 1.45); ctx.quadTo(-headR * .1, headR * 1.2, -headR * .3, headR * .5); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-headR * 1.2, -headR * .55); ctx.lineTo(headR * 1.3, -headR * .55); ctx.lineTo(headR * .7, -headR * .75); ctx.quadraticCurveTo(0, -headR * 1.9, -headR * .7, -headR * .75); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(headR * .2, headR * .3); ctx.quadraticCurveTo(headR * 1.0, headR * .5, headR * .6, headR * 1.45); ctx.quadraticCurveTo(-headR * .1, headR * 1.2, -headR * .3, headR * .5); ctx.closePath(); ctx.fill();
   } else if (kind === "woman") { // bun
     ctx.beginPath(); ctx.arc(-headR * .85, -headR * .55, headR * .55, 0, TAU); ctx.fill();
   }
@@ -189,7 +190,7 @@ function drawBird(ctx, H, p, col, glowIt, perched) {
   ctx.beginPath(); ctx.moveTo(-H * .45, -H * .35); ctx.lineTo(-H * 1.1, -H * .55); ctx.lineTo(-H * 1.0, -H * .22); ctx.fill();
   const flap = perched ? -.2 + Math.sin(p * .5) * .05 : Math.sin(p) * 1.0;
   ctx.save(); ctx.translate(-H * .05, -H * .4); ctx.rotate(-flap);
-  ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadTo(-H * .4, -H * .9, -H * .95, -H * 1.0); ctx.quadTo(-H * .5, -H * .3, 0, H * .12); ctx.fill(); ctx.restore();
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-H * .4, -H * .9, -H * .95, -H * 1.0); ctx.quadraticCurveTo(-H * .5, -H * .3, 0, H * .12); ctx.fill(); ctx.restore();
   if (perched) { ctx.strokeStyle = col; ctx.lineWidth = H * .07; ctx.beginPath(); ctx.moveTo(0, -H * .05); ctx.lineTo(-H * .05, H * .1); ctx.moveTo(H * .15, -H * .05); ctx.lineTo(H * .15, H * .1); ctx.stroke(); }
 }
 
@@ -199,7 +200,7 @@ function drawDuck(ctx, H, p, col) {
   ctx.beginPath(); ctx.ellipse(0, -H * .2 + bob, H * .62, H * .26, 0, 0, TAU); ctx.fill();
   ctx.beginPath(); ctx.moveTo(-H * .55, -H * .25 + bob); ctx.lineTo(-H * .85, -H * .48 + bob); ctx.lineTo(-H * .5, -H * .1 + bob); ctx.fill();
   ctx.lineCap = "round"; ctx.strokeStyle = col; ctx.lineWidth = H * .16;
-  ctx.beginPath(); ctx.moveTo(H * .4, -H * .3 + bob); ctx.quadTo(H * .62, -H * .55 + bob, H * .52, -H * .8 + bob); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(H * .4, -H * .3 + bob); ctx.quadraticCurveTo(H * .62, -H * .55 + bob, H * .52, -H * .8 + bob); ctx.stroke();
   ctx.beginPath(); ctx.arc(H * .55, -H * .85 + bob, H * .14, 0, TAU); ctx.fill();
   ctx.fillStyle = "#f2a33a"; ctx.beginPath(); ctx.moveTo(H * .64, -H * .88 + bob); ctx.lineTo(H * .86, -H * .82 + bob); ctx.lineTo(H * .64, -H * .76 + bob); ctx.fill();
   ctx.fillStyle = "#1a1a1a"; ctx.beginPath(); ctx.arc(H * .58, -H * .89 + bob, H * .025, 0, TAU); ctx.fill();
@@ -226,7 +227,7 @@ function drawFlock(ctx, H, p, col, n = 9, pecking = true, t = 0) {
       const y = -H * (3 + r() * 8) - (t % 4) * 0;
       const f = Math.sin(ph * 3) * .9;
       ctx.translate(0, y);
-      ctx.beginPath(); ctx.moveTo(-H * 1.2, -f * H); ctx.quadTo(-H * .4, -H * .2, 0, 0); ctx.quadTo(H * .4, -H * .2, H * 1.2, -f * H); ctx.quadTo(H * .4, H * .2, 0, H * .3); ctx.quadTo(-H * .4, H * .2, -H * 1.2, -f * H); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-H * 1.2, -f * H); ctx.quadraticCurveTo(-H * .4, -H * .2, 0, 0); ctx.quadraticCurveTo(H * .4, -H * .2, H * 1.2, -f * H); ctx.quadraticCurveTo(H * .4, H * .2, 0, H * .3); ctx.quadraticCurveTo(-H * .4, H * .2, -H * 1.2, -f * H); ctx.fill();
     }
     ctx.restore();
   }
@@ -284,11 +285,12 @@ function drawActor(ctx, view, sky, a, lt, shotT) {
     if (kind === "bird") drawBird(ctx, H, phase, col, false, st.act === "perch");
     else if (kind === "flock") drawFlock(ctx, H, phase, col, a.count || 9, st.act !== "fly", shotT);
     else if (kind === "duck") drawDuck(ctx, H, phase, col);
+    else if (kind === "mouse") { ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(0, -H * .4, H * .7, H * .4, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(H * .65, -H * .5, H * .3, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(H * .5, -H * .85, H * .2, 0, TAU); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = H * .08; ctx.beginPath(); ctx.moveTo(-H * .65, -H * .35); ctx.quadraticCurveTo(-H * 1.4, -H * .9 + Math.sin(phase) * H * .3, -H * 2, -H * .4); ctx.stroke(); for (const lx of [-.3, .3]) { ctx.beginPath(); ctx.moveTo(H * lx, -H * .1); ctx.lineTo(H * lx + Math.sin(phase * 2 + lx * 9) * H * .2, 0); ctx.stroke(); } }
     else drawHumanoid(ctx, kind, H, P, col, shotT, extras);
   };
   if (kind === "bird" && def.glow) glow(ctx, 0, -H * .3, H * 4, [255, 255, 235], .3);
 
-  if (kind !== "bird" && kind !== "duck") {
+  if (kind !== "bird" && kind !== "duck" && kind !== "mouse") {
     // rim light: an offset copy in the key-light colour behind the silhouette
     ctx.save(); ctx.translate(lightDir * st.face * H * .012, -H * .006); paint(rim); ctx.restore();
   }

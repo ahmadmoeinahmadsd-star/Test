@@ -312,6 +312,9 @@ class MainActivity : Activity() {
         val extras = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setPadding(0, dpi(10f), 0, 0) }
         storyBtn = pill("Story mode") { setStoryMode(!storyMode) }
         bottomPanel.addView(storyBtn, lp(margin = 6f))
+        bottomPanel.addView(pill("✦ Illustrated demo: Hansel & Gretel") {
+            startActivity(Intent(this, TheaterActivity::class.java))
+        }, lp(margin = 4f))
         extras.addView(pill("✦ Scene") {
             toast(story.nextScene()); prefs.edit().putInt("scene", story.scene).apply()
         }, lp(margin = 4f))

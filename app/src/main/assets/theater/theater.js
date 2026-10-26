@@ -11,6 +11,12 @@ const bview = new View(bctx, 1, 1);
 const SHOTS = (window.STORY && window.STORY.shots) || [];
 const TRANSCRIPT = window.TRANSCRIPT || { segments: [] };
 SHOTS.sort((a, b) => a.t - b.t);
+// the script is written in absolute audio seconds; convert per-shot timings to shot-relative
+if (window.STORY.absolute) for (const s of SHOTS) {
+  for (const a of s.cast || []) { for (const k of a.keys) k.t = Math.max(0, k.t - s.t); if (a.until !== undefined) a.until -= s.t; if (a.from !== undefined) a.from -= s.t; }
+  if (s.anim) for (const k in s.anim) { s.anim[k][2] -= s.t; s.anim[k][3] -= s.t; }
+  if (s.flash) s.flash[0] -= s.t;
+}
 SHOTS.forEach((s, i) => { s.end = i + 1 < SHOTS.length ? SHOTS[i + 1].t : (window.STORY.duration || s.t + 30); s._fx = (s.fx || []).map(([k, n, str], j) => ({ p: new Particles(k, n, 100 + i * 7 + j), str: str ?? 1 })); });
 
 function resize() {
@@ -24,23 +30,50 @@ window.addEventListener("resize", resize); resize();
 
 function shotIndexAt(t) { let i = 0; while (i < SHOTS.length - 1 && SHOTS[i + 1].t <= t) i++; return i; }
 
-function camAt(shot, lt, portrait) {
+function autoY(z) { return GROUND - .3 * (1000 / z); }
+function camAt(shot, lt, v) {
+  const portrait = v.w < v.h;
   const dur = Math.max(1, shot.end - shot.t);
   const from = shot.cam?.from || { x: 1000, y: 500, z: 1 }, to = shot.cam?.to || from;
   const k = easeInOut(lt / dur);
   let z = lerp(from.z ?? 1, to.z ?? 1, k);
-  let x = lerp(from.x ?? 1000, to.x ?? 1000, k), y = lerp(from.y ?? 500, to.y ?? 500, k);
+  let x = lerp(from.x ?? 1000, to.x ?? from.x ?? 1000, k);
+  let y = lerp(from.y ?? autoY(from.z ?? 1), to.y ?? (from.y !== undefined && to === from ? from.y : autoY(to.z ?? 1)), k);
   // keep framing sensible in portrait: zoom in a touch, centre on the action
-  if (portrait) { z *= shot.cam?.pz ?? 1.15; x = shot.cam?.px !== undefined ? lerp(shot.cam.px, shot.cam.px2 ?? shot.cam.px, k) : x; y = lerp(y, GROUND - 170, .35); }
+  if (portrait) {
+    z *= shot.cam?.pz ?? 1.45;
+    if (shot.cam?.px !== undefined) x = lerp(shot.cam.px, shot.cam.px2 ?? shot.cam.px, k);
+    else {
+      const f = focus(shot, lt);
+      if (f) { x = f.x; const fit = ((v.w / v.h) * 1000) / (f.spread + 300); z = clamp(Math.min(z, fit), .8, z); }
+    }
+    y = GROUND - .3 * (1000 / z) - (shot.cam?.lift ?? 0);
+  } else {
+    z *= 1.05;
+  }
   // slow breathing drift so nothing is ever perfectly still
   return { x: x + Math.sin(lt * .21) * 6, y: y + Math.sin(lt * .17) * 4, z };
+}
+
+// where the characters are (for portrait framing): average x of the people on stage
+function focus(shot, lt) {
+  const xs = [];
+  for (const a of shot.cast || []) {
+    if (a.nofocus || CAST[a.who]?.kind === "bird" || CAST[a.who]?.kind === "flock" || CAST[a.who]?.kind === "mouse") continue;
+    if ((a.until !== undefined && lt > a.until) || (a.from !== undefined && lt < a.from)) continue;
+    xs.push(evalActor(a, lt).x);
+  }
+  if (shot.cam?.focus !== undefined) xs.push(shot.cam.focus);
+  if (!xs.length) return null;
+  const lo = Math.min(...xs), hi = Math.max(...xs);
+  return { x: (lo + hi) / 2, spread: hi - lo };
 }
 
 function renderShot(c, v, shot, t) {
   const lt = t - shot.t;
   const sky = skyOf(shot.sky || "night");
   const world = WORLDS[shot.world] || WORLDS.woods;
-  const cam = camAt(shot, lt, v.w < v.h);
+  const cam = camAt(shot, lt, v);
   v.cx = cam.x; v.cy = cam.y; v.z = cam.z;
   const P = { ...(shot.P || {}) };
   // world params can be animated: P.anim = {key: [from, to, t0, t1]}
@@ -49,10 +82,10 @@ function renderShot(c, v, shot, t) {
   c.save();
   world.back(c, v, t, sky, P);
   const cast = (shot.cast || []).slice().sort((a, b) => (a.depth ?? 1) - (b.depth ?? 1));
-  for (const a of cast) drawActor(c, v, sky, a, lt, t);
+  for (const a of cast) { if ((a.until !== undefined && lt > a.until) || (a.from !== undefined && lt < a.from)) continue; drawActor(c, v, sky, a, lt, t); }
   world.front(c, v, t, sky, P);
   for (const f of shot._fx) f.p.draw(c, v, t, sky, f.str);
-  if (shot.flash) { const [ft, fd] = shot.flash; const k = 1 - clamp((lt - ft) / fd, 0, 1); if (lt >= ft && k > 0) { v.screen(); c.fillStyle = `rgba(255,190,120,${k * .6})`; c.fillRect(0, 0, v.w, v.h); } }
+  if (shot.flash) { const [ft, fd] = shot.flash; const k = 1 - clamp((lt - ft) / fd, 0, 1); if (lt >= ft && k > 0) { v.screen(); c.fillStyle = `rgba(255,170,100,${k * .38})`; c.fillRect(0, 0, v.w, v.h); } }
   vignette(c, v, shot.vignette ?? .6);
   c.restore();
 }
@@ -93,7 +126,26 @@ function captionAt(t) {
 }
 
 // ---------------------------------------------------------------- player
-const audio = document.getElementById("audio");
+// Audio: inside the Android app the phone plays the MP3 natively (reliable seeking) and reports its
+// position here; in a browser we use the <audio> element.
+class NativeAudio {
+  constructor(n) { this.n = n; this.base = 0; this.at = performance.now(); this.paused = true; this.ls = {}; this._dur = (n.duration() || 0) / 1000; }
+  get duration() { return this._dur; }
+  get currentTime() { return this.paused ? this.base : this.base + (performance.now() - this.at) / 1000; }
+  set currentTime(t) { this.n.seek(Math.round(t * 1000)); this.base = t; this.at = performance.now(); }
+  play() { this.n.play(); this.base = this.currentTime; this.at = performance.now(); this.paused = false; this.emit("play"); return Promise.resolve(); }
+  pause() { this.base = this.currentTime; this.n.pause(); this.paused = true; this.emit("pause"); }
+  sync(ms, playing, durMs) {
+    if (durMs) { const had = this._dur; this._dur = durMs / 1000; if (!had) this.emit("loadedmetadata"); }
+    this.base = ms / 1000; this.at = performance.now();
+    if (playing === this.paused) { this.paused = !playing; this.emit(playing ? "play" : "pause"); }
+  }
+  addEventListener(n, f) { (this.ls[n] = this.ls[n] || []).push(f); }
+  emit(n) { (this.ls[n] || []).forEach((f) => f()); }
+}
+const audio = window.StoryGlowNative ? new NativeAudio(window.StoryGlowNative) : document.getElementById("audio");
+window.__sync = (ms, playing, dur) => audio.sync && audio.sync(ms, playing, dur);
+if (window.StoryGlowNative) setTimeout(buildTicks, 0);
 const ui = document.getElementById("ui");
 const playBtn = document.getElementById("play");
 const bar = document.getElementById("bar"), fillEl = document.getElementById("fill"), ticks = document.getElementById("ticks");
@@ -126,7 +178,7 @@ let dragging = false;
 bar.addEventListener("pointerdown", (e) => { e.stopPropagation(); dragging = true; seekFrom(e); });
 window.addEventListener("pointermove", (e) => { if (dragging) seekFrom(e); });
 window.addEventListener("pointerup", () => dragging = false);
-startEl.addEventListener("click", () => { startEl.classList.add("gone"); audio.play().catch(() => {}); showUI(); });
+startEl.addEventListener("click", () => { startEl.classList.add("gone"); document.body.classList.remove("idle"); audio.play().catch(() => {}); showUI(); });
 
 function frame() {
   const t = PREVIEW ? previewT : audio.currentTime;
@@ -142,5 +194,5 @@ function frame() {
 // preview / screenshot support: index.html?t=123.4
 let previewT = parseFloat(params.get("t") || "0");
 window.renderAt = (t) => { previewT = t; frame(); };
-if (PREVIEW) { startEl.classList.add("gone"); ui.classList.add("hide"); frame(); }
+if (PREVIEW) { document.body.classList.remove("idle"); startEl.style.display = "none"; ui.style.display = "none"; document.getElementById("top").style.display = "none"; frame(); }
 else requestAnimationFrame(frame);

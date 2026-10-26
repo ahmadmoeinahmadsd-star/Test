@@ -27,15 +27,17 @@
   #play { font-size: 22px !important; padding: 12px 26px !important; background: rgba(255,255,255,.22) !important; }
   #cc.off { opacity: .45; }
   #time { text-align: center; font-size: 12px; opacity: .7; margin-top: 4px; font-family: system-ui, sans-serif; }
-  #start { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 45%, rgba(40,30,70,.6), rgba(0,0,0,.92)); transition: opacity 1s; z-index: 5; text-align: center; padding: 30px; }
+  #start { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 42%, rgba(46,32,78,.82), #05030a 75%); transition: opacity 1s; z-index: 5; text-align: center; padding: 30px; }
   #start.gone { opacity: 0; pointer-events: none; }
+  body.idle #ui, body.idle #top, body.idle #caption { visibility: hidden; }
+  @media (max-width: 480px) { #book { font-size: 11px; letter-spacing: .08em; } }
   #start h1 { font-weight: normal; font-style: italic; font-size: clamp(34px, 7vw, 64px); margin: 0 0 6px; color: #ffe8c4; }
   #start p { margin: 4px 0; opacity: .75; }
   #start .go { margin-top: 28px; padding: 14px 34px; border-radius: 40px; background: #ffd99a; color: #2a1a10; font-size: 18px; }
   #start small { position: absolute; bottom: 24px; left: 20px; right: 20px; opacity: .5; font-size: 12px; font-family: system-ui, sans-serif; }
 </style>
 </head>
-<body>
+<body class="idle">
 <canvas id="stage"></canvas>
 <div id="tap"></div>
 <div id="caption"></div>
@@ -57,7 +59,7 @@
   <div class="go">▶ Begin the story</div>
   <small>Public-domain recording from LibriVox.org · Visuals generated live by StoryGlow</small>
 </div>
-<audio id="audio" src="../demo/hansel.mp3" preload="auto"></audio>
+<audio id="audio" src="../demo/hansel.mp3" preload="metadata"></audio>
 <script src="core.js"></script>
 <script src="world.js"></script>
 <script src="figures.js"></script>

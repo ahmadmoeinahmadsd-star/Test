@@ -21,6 +21,11 @@ android {
         }
     }
 
+    // the demo audiobook must stay uncompressed so it can be streamed and seeked from the APK
+    androidResources {
+        noCompress += "mp3"
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

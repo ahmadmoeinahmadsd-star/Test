@@ -62,3 +62,18 @@ simple animated scene from the words it recognises:
 
 Play Audible through the phone speaker; with headphones the mic can't hear the book.
 The last sentence heard and the words it reacted to appear on screen.
+
+## Illustrated audiobook demo (Hansel and Gretel)
+A second home-screen icon, **Hansel & Gretel**, opens a fully illustrated, animated
+telling of the Brothers Grimm tale, synced to the public-domain LibriVox recording
+(read by Bill Stackpole). About 85 shots across 21 minutes, with chapter markers and
+word-by-word read-along captions.
+
+- `app/src/main/assets/theater/` — the animation engine (HTML canvas): `core.js` (camera,
+  skies, light, particles), `world.js` (scenery), `figures.js` (articulated characters),
+  `story.js` (the timed shot script), `theater.js` (player, captions)
+- `app/src/main/assets/demo/` — the recording and its timed transcript
+- `tools/transcribe.py` + `.github/workflows/prepare-demo.yml` — downloads the recording
+  and produces word-level timestamps
+
+Preview any moment in a desktop browser: open `theater/index.html?t=SECONDS`.
