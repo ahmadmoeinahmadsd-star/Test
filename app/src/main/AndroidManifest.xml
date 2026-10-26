@@ -7,6 +7,10 @@
 
     <queries>
         <package android:name="com.audible.application" />
+        <!-- Android 11+: needed to see the phone's speech recognition service -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
     </queries>
 
     <application

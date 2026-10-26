@@ -44,6 +44,7 @@ class MainActivity : Activity() {
     private lateinit var anyBtn: TextView
     private lateinit var storyBtn: TextView
     private lateinit var subtitle: TextView
+    private lateinit var statusText: TextView
     private lateinit var speech: SpeechListener
     private var storyMode = false
     private var lastHeardAt = 0L
@@ -70,7 +71,7 @@ class MainActivity : Activity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         watcher = AudibleWatcher(this) { onMediaChanged() }
         watcher.followAnyPlayer = prefs.getBoolean("anyPlayer", false)
-        speech = SpeechListener(this, { text, _ -> onHeard(text) }, { msg -> toast(msg) })
+        speech = SpeechListener(this, { text, _ -> onHeard(text) }, { msg -> toast(msg); setStatus(msg) }, { msg -> setStatus(msg) })
         storyMode = prefs.getBoolean("storyMode", false)
         buildUi()
         story.setScene(if (storyMode) StoryView.STORY else prefs.getInt("scene", 0))
@@ -150,7 +151,8 @@ class MainActivity : Activity() {
         }
 
         // Story mode: listen only while the book is actually playing
-        val shouldListen = storyMode && playing && hasMic()
+        val shouldListen = storyMode && hasMic() && (playing || watcher.controller == null)
+        if (storyMode && !shouldListen && hasMic()) setStatus("⏸ Paused – listening resumes when the book plays")
         if (shouldListen && !speech.active) speech.start()
         if (!shouldListen && speech.active) speech.stop()
         if (subtitle.alpha > 0f && System.currentTimeMillis() - lastHeardAt > 9000) subtitle.animate().alpha(0f).setDuration(800).start()
@@ -267,6 +269,18 @@ class MainActivity : Activity() {
         }
         root.addView(subtitle, FrameLayout.LayoutParams(-1, -2, Gravity.TOP).apply { topMargin = dpi(150f) })
 
+        // ---- Story mode status (always visible while Story mode is on)
+        statusText = TextView(this).apply {
+            setTextColor(Color.argb(230, 255, 255, 255)); textSize = 12f
+            setShadowLayer(6f, 0f, 1f, Color.BLACK)
+            setPadding(dpi(12f), dpi(6f), dpi(12f), dpi(6f))
+            background = GradientDrawable().apply { cornerRadius = dp(14f); setColor(Color.argb(110, 0, 0, 0)) }
+            visibility = View.GONE
+        }
+        root.addView(statusText, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END).apply {
+            topMargin = dpi(20f); rightMargin = dpi(12f)
+        })
+
         // ---- bottom: progress + controls
         bottomPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -379,21 +393,30 @@ class MainActivity : Activity() {
 
     private fun setStoryMode(on: Boolean) {
         if (on && !hasMic()) { requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 8); return }
-        if (on && !speech.isAvailable()) { toast("This phone has no speech recognition service"); return }
+        if (on && !speech.isAvailable()) toast("Couldn't find a speech service – trying anyway. Installing the Google app may help")
         storyMode = on
         prefs.edit().putBoolean("storyMode", on).apply()
         if (on) {
             story.setScene(StoryView.STORY)
+            setStatus("🎙 Starting…")
             toast("Story mode listens through the mic – play Audible on the phone speaker, not headphones")
         } else {
             speech.stop()
             story.setScene(prefs.getInt("scene", 0).takeIf { it != StoryView.STORY } ?: 0)
             subtitle.alpha = 0f
+            statusText.visibility = View.GONE
         }
         updateToggleLabels()
     }
 
+    private fun setStatus(s: String) {
+        if (!::statusText.isInitialized) return
+        statusText.text = s
+        statusText.visibility = if (storyMode) View.VISIBLE else View.GONE
+    }
+
     private fun onHeard(text: String) {
+        setStatus("🎙 Heard: ${text.takeLast(40)}")
         story.story.onText(text, story.width.toFloat())
         val tags = story.story.state.lastKeywords
         subtitle.text = if (tags.isEmpty()) "“$text”" else "“$text”\n✦ ${tags.joinToString("  ·  ")}"

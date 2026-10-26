@@ -19,6 +19,7 @@ class SpeechListener(
     private val context: Context,
     private val onText: (text: String, isFinal: Boolean) -> Unit,
     private val onProblem: (String) -> Unit,
+    private val onStatus: (String) -> Unit = {},
 ) {
     private var recognizer: SpeechRecognizer? = null
     private val handler = Handler(Looper.getMainLooper())
@@ -72,9 +73,23 @@ class SpeechListener(
         }
         try {
             recognizer?.startListening(intent)
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            onStatus("Couldn't start listening: ${e.javaClass.simpleName}")
             later(1000) { create(); listen() }
         }
+    }
+
+    private fun errorName(e: Int) = when (e) {
+        SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "network timeout"
+        SpeechRecognizer.ERROR_NETWORK -> "network"
+        SpeechRecognizer.ERROR_AUDIO -> "audio/mic busy"
+        SpeechRecognizer.ERROR_SERVER -> "server"
+        SpeechRecognizer.ERROR_CLIENT -> "client"
+        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "busy"
+        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "no mic permission"
+        12 -> "language not supported"
+        13 -> "language not downloaded"
+        else -> "other"
     }
 
     private fun later(ms: Long, block: () -> Unit) {
@@ -98,6 +113,9 @@ class SpeechListener(
 
         override fun onError(error: Int) {
             if (!active) return
+            if (error != SpeechRecognizer.ERROR_NO_MATCH && error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
+                onStatus("Recognizer error $error (${errorName(error)})${if (useOnDevice) " · on-device" else ""}")
+            else onStatus("🎙 Listening… (nothing understood yet)")
             when (error) {
                 SpeechRecognizer.ERROR_NO_MATCH,
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> later(50) { listen() }
@@ -131,8 +149,8 @@ class SpeechListener(
             }
         }
 
-        override fun onReadyForSpeech(params: Bundle?) {}
-        override fun onBeginningOfSpeech() {}
+        override fun onReadyForSpeech(params: Bundle?) { onStatus("🎙 Listening…${if (useOnDevice) " (on-device)" else ""}") }
+        override fun onBeginningOfSpeech() { onStatus("🎙 Hearing speech…") }
         override fun onRmsChanged(rmsdB: Float) {}
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() {}
